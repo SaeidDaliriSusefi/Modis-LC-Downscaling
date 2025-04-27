@@ -1,17 +1,22 @@
-var cor = [45.68929902130395,37.11033465203267]
+var country_name =  'Italy'                            
+var region_name = 'Lombardia'  
+var city_name = 'Lecco'
+var time_start = '2020'
+var time_end = '2021'
 
-var geometry = ee.Geometry.Point(cor)
+// Load and filter administrative boundaries
+var city = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level2")
+  .filter(ee.Filter.and(
+    ee.Filter.eq('ADM0_NAME', country_name),
+    ee.Filter.eq('ADM1_NAME', region_name),
+    ee.Filter.eq('ADM2_NAME', city_name)
+  ));
  
-var table = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_5")
- 
-var roi = table.filterBounds(geometry).map(function(feature){
-  return feature.simplify(3000)
-  })
- 
-Map.centerObject(roi)
-Map.addLayer(roi)
+Map.centerObject(city)
+Map.addLayer(city)
 
-var time_start = '2020', time_end = '2021'
+var time_start = '2020'
+var time_end = '2021'
 
 var modis = ee.ImageCollection("MODIS/061/MCD12Q1")
 .select('LC_Type1')
@@ -27,7 +32,7 @@ var vis = {
   ],
 };
 
-Map.addLayer(modis.clip(roi),vis, 'modis_lc_500m',false)
+Map.addLayer(modis.clip(city),vis, 'modis_lc_500m',false)
 
 
 // predictor 
@@ -35,7 +40,7 @@ Map.addLayer(modis.clip(roi),vis, 'modis_lc_500m',false)
 var landsat  = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
 .select('SR_B.*')
 .filterDate(time_start, time_end)
-.filterBounds(roi)
+.filterBounds(city)
 .filter(ee.Filter.lt('CLOUD_COVER', 10))
 .map(function(img){
   var gain = ee.Number(img.get('REFLECTANCE_MULT_BAND_1'))
@@ -53,12 +58,12 @@ var image_2020 = ee.Image('JRC/GHSL/P2023A/GHS_BUILT_S/2020')
 var built_2020 = image_2020.select('built_surface');
 var visParams = {min: 0.0, max: 8000.0, palette: ['000000', 'FFFFFF']};
 
-Map.addLayer(built_2020.clip(roi), visParams, 'urban',false);
+Map.addLayer(built_2020.clip(city), visParams, 'urban',false);
 
 
 var sar = ee.ImageCollection("COPERNICUS/S1_GRD")
 .filterDate(time_start, time_end)
-.filterBounds(roi)
+.filterBounds(city)
 .filter(ee.Filter.listContains('transmitterReceiverPolarisation','VV'))
 .filter(ee.Filter.eq('instrumentMode','IW'))
 .filter(ee.Filter.eq('orbitProperties_pass','DESCENDING')).select('VV')
@@ -67,7 +72,7 @@ var sar = ee.ImageCollection("COPERNICUS/S1_GRD")
 var dataset = landsat_stat.addBands(built_2020).addBands(modis).addBands(sar)
 
 var training_data = dataset.stratifiedSample({
-  numPoints: 100, classBand: 'LC_Type1', region: roi, scale: 100
+  numPoints: 100, classBand: 'LC_Type1', region: city, scale: 100
   });
   
 var model = ee.Classifier.libsvm().train({
@@ -82,4 +87,4 @@ var modis30 = dataset.select(predictors).classify(model);
 
 print(modis30)
   
-Map.addLayer(modis30.clip(roi),vis, 'modis_lc_50m',false)
+Map.addLayer(modis30.clip(city),vis, 'modis_lc_30m',false)
