@@ -11,4 +11,4 @@ Python libraries: scikit-learn, pandas, numpy, matplotlib
 
 
 ## 📸 Example Outputs
-![image alt](https://github.com/SaeidDaliriSusefi/Modis-LST-Downscaling/blob/987f99c238f26026b03af24a8ba9479af8caa433/Images/Modis_LST.png)
+![image alt](https://github.com/SaeidDaliriSusefi/Modis-LC-Downscaling/blob/74538fdb6207a0f0321db63172a9e7c85cee16d3/Images/Modis_LC.png)
